@@ -1,0 +1,530 @@
+
+// This #include statement was automatically added by the Particle IDE.
+//#include <Adafruit_MAX31865_library.h>
+
+// This #include statement was automatically added by the Particle IDE.
+#include <Adafruit_MAX31856.h>
+
+// This #include statement was automatically added by the Particle IDE.
+#include <blynk.h>
+
+// This #include statement was automatically added by the Particle IDE.
+#include <adxl345.h>
+
+// ------------
+// Blink an LED
+
+
+// This #include statement was automatically added by the Particle IDE.
+#include <adxl345.h>
+
+
+// This #include statement was automatically added by the Particle IDE.
+#include <blynk.h>
+
+// ------------
+// Blink an LED
+// ------------
+#include "Particle.h"
+
+// Simple test of using sleep(SLEEP_MODE_DEEP, 30). This halts execution of your code, and when it
+// wakes up again, it goes through setup() again with all variables cleared.
+
+// Running this test without a battery connected to VBAT is interesting, however, because retained
+// variables ARE preserved in deep sleep, even without a battery.
+
+// IMPORTANT NOTE: If using retained variables to preserve values across deep sleep when NOT using
+// a battery, be sure to tie VBAT to ground. This somewhat counter-intuitive step is necessary
+// because otherwise when you first power up the device, the retained memory will not be initialized,
+// so it will contain random values, which will probably confuse your code!
+#include <blynk.h>
+
+// This #include statement was automatically added by the Particle IDE.
+//#include <Adafruit_MAX31865_library.h>
+
+//  This is a library for the Adafruit PT100/P1000 RTD Sensor w/MAX31865
+//
+//  Designed specifically to work with the Adafruit RTD Sensor
+//  ----> https://www.adafruit.com/products/3328
+//
+//  This sensor uses SPI to communicate, 4 pins are required to
+//  interface
+//  Adafruit invests time and resources providing this open source code,
+//  please support Adafruit and open-source hardware by purchasing
+//  products from Adafruit!
+//
+//  Written by Limor Fried/Ladyada for Adafruit Industries.
+//  BSD license, all text above must be included in any redistribution
+// ****************************************************/
+#include<application.h>
+
+ #include<spark_wiring_i2c.h> 
+ 
+
+//*****This is for temperature sensor*********************************************
+#include <Adafruit_MAX31865.h>
+
+//Adafruit_MAX31865 sensor(A2, A5, A4, A3);
+Adafruit_MAX31865 sensor = Adafruit_MAX31865(A2, A5, A4, A3);
+// digital pins in this order           (CS, SDI, SDO, CLK)
+// use hardware SPI, just pass in the CS pin
+// Adafruit_MAX31865 sensor = Adafruit_MAX31865(A2);
+
+// The value of the Rref resistor. Use 4300.0!
+#define RREF 4300.0
+// The 'nominal' 0-degrees-C resistance of the sensor
+// 100.0 for PT100, 1000.0 for PT1000
+#define RNOMINAL  1000.0
+#define FREQUENCY 1000
+#define BLYNK_PRINT Serial
+//*****This is for temperature sensor*********************************************
+
+
+// Simple test of using sleep(), which really just puts the Wi-Fi adapter to sleep
+// but your code continues to run. I think I'd prefer to use SYSTEM_MODE(MANUAL)
+// instead for more explicit control, but this does work.
+
+STARTUP(System.enableFeature(FEATURE_RETAINED_MEMORY));
+
+SYSTEM_THREAD(ENABLED);//*added to make sure it does not get stuck in a loop
+
+unsigned long firstAvailable = 0;
+int counter;
+retained int retainedCounter = 0;
+int frequency;
+
+int led2 = D7; // Instead of writing D7 over and over again, we'll write led2
+// This one is the little blue LED on your board. On the Photon it is next to D7, and on the Core it is next to the USB jack.
+
+// Having declared these variables, let's move on to the setup function.
+// The setup function is a standard part of any microcontroller program.
+// It runs only once when the device boots up or is reset.
+// THis sets up internet connection/*********************************************
+//DANGER - DO NOT SHARE!!!!
+char auth[] = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"; // Put your blynk token here  // sentry 1
+//char auth[] = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"; // Put your blynk token here  // sentry 2
+//char auth[] = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"; // Put your blynk token here  // sentry 3
+//char ssid[] = "dilney's iPhone";
+//char pass[] = "XXXXXXXXXXXXXXX";
+
+
+//char ssid[] = "XXXXXX";
+//char pass[] = "XXXXXXXXXXXXXXXXXXX";
+
+
+
+//DANGER - DO NOT SHARE!!!!
+char VERSION[64] = "0.04";
+WidgetTerminal terminal(V15);
+
+
+// *****************************ADXL345 I2C address is 0x53(83)
+
+#define Addr 0x53
+
+int xAccl = 0, yAccl =  0, zAccl = 0;
+float xgl = 0, ygl = 0, zgl = 0; // trying to convert to G's****//  
+
+
+//*******************************************************************************
+
+void setup() {
+   
+//  serial begin for the wifioff programming 
+   Serial.begin(115200);
+  // We are going to tell our device that D0 and D7 (which we named led1 and led2 respectively) are going to be output
+  // (That means that we will be sending voltage to them, rather than monitoring voltage that comes from them)
+
+  // It's important you do this here, inside the setup() function rather than outside it or in the loop function.
+  pinMode(led2, OUTPUT);
+
+}
+
+// Next we have the loop function, the other essential part of a microcontroller program.
+// This routine gets repeated over and over, as quickly as possible and as many times as possible, after the setup function is called.
+// Note: Code that blocks for too long (like more than 5 seconds), can make weird things happen (like dropping the network connection).  The built-in delay function shown below safely interleaves required background activity, so arbitrarily long delays can safely be done if you need them.
+  // We are going to tell our device that D0 and D7 (which we named led1 and led2 respectively) are going to be output
+  // (That means that we will be sending voltage to them, rather than monitoring voltage that comes from them)
+
+  // It's important you do this here, inside the setup() function rather than outside it or in the loop function.
+  pinMode(led2, OUTPUT);
+  
+  
+//*****This is for temperature sensor*********************************************  
+ //   Serial.begin(115200);
+  Serial.println("Adafruit MAX31865 PT100 Sensor Test!");
+
+  sensor.begin(MAX31865_2WIRE);  // set to 2WIRE, 3WIRE, or 4WIRE as necessary
+
+  Blynk.begin(auth);
+//  Blynk.begin(auth, ssid, pass);  // wifi username and password
+//  Blynk.config (auth);
+//scan your wifi
+//make a code of SSID selection
+//Blynk.connectWiFI (ssid, pass);
+//*****This is for temperature sensor********************************************* 
+
+ //****This is for vibration adxl345*****************************************************
+// Set variable  
+
+Particle.variable("i2cdevice","ADXL345");  
+
+Particle.variable("xAccl",xAccl);  
+
+Particle.variable("yAccl",yAccl);  
+
+Particle.variable("zAccl",zAccl);    
+
+// Initialise I2C communication as MASTER   
+
+Wire.begin();  
+
+// Initialise serial communication, set baud rate = 9600  
+
+Serial.begin(9600);
+
+// Start I2C transmission  
+
+Wire.beginTransmission(Addr);  
+
+// Select bandwidth rate register  
+
+Wire.write(0x2C);  
+
+// Select output data rate = 100 Hz  
+
+Wire.write(0x0A);  
+
+// Stop I2C Transmission  
+
+Wire.endTransmission();
+
+// Start I2C transmission  
+
+Wire.beginTransmission(Addr);  
+
+// Select power control register  
+
+Wire.write(0x2D);  
+
+// Select auto sleep disable  
+
+Wire.write(0x08);  
+
+// Stop I2C transmission  
+
+Wire.endTransmission();
+
+// Start I2C transmission  
+
+Wire.beginTransmission(Addr);  
+
+// Select data format register  
+
+Wire.write(0x31);  
+
+// Select full resolution, +/-2g (0X08) , for 16g it shoudl be (0x0B)
+
+Wire.write(0x08);  
+
+// End I2C transmission  
+
+Wire.endTransmission();  
+
+delay(100);
+ //****This is for vibration adxl345*****************************************************
+// Flashlight program*****************************************************************
+//{    pinMode(led2, OUTPUT);
+//    digitalWrite(led2, LOW);
+//}    
+//    Particle.function('flashlight', flashlight);
+
+
+//int flashlight(String command) {
+//        if (command == 'on' || command 'On' || command 'ON' ){
+//                digitalWrite(led2, HIGH);
+ //               return 1;
+//                }
+//         else if (command == 'off'){
+//                digitalWrite(led2, LOW);
+//                return 0;
+//                }
+//}
+//        }
+//        }
+}
+
+
+
+// Next we have the loop function, the other essential part of a microcontroller program.
+// This routine gets repeated over and over, as quickly as possible and as many times as possible, after the setup function is called.
+// Note: Code that blocks for too long (like more than 5 seconds), can make weird things happen (like dropping the network connection).  The built-in delay function shown below safely interleaves required background activity, so arbitrarily long delays can safely be done if you need them.
+
+void loop() {
+  // ********************************To blink the LED, first we'll turn it on...
+  digitalWrite(led2, HIGH);
+
+  // We'll leave it on for 1 second...
+  delay(1000);
+
+  // Then we'll turn it off...
+  digitalWrite(led2, LOW);
+
+  // Wait 1 second...
+  delay(1000);
+
+  // And repeat!
+  // ********************************To blink the LED, first we'll turn it on...
+  
+  
+// *********************************************** this is for deepsleep programming
+bool wifiReady = WiFi.ready();
+	bool cloudReady = Particle.connected();
+
+	Serial.printlnf("wifi=%s cloud=%s counter=%d retainedCounter=%d", (wifiReady ? "on" : "off"), (cloudReady ? "on" : "off"),
+			counter++, retainedCounter++);
+
+	if (wifiReady) {
+		if (firstAvailable == 0) {
+			firstAvailable = millis();
+		}
+		if (millis() - firstAvailable > 90000) {
+			// After we've been up for 30 seconds, go to sleep. The delay is so the serial output gets written out before
+			// sleeping.
+			Serial.println("calling System.sleep(SLEEP_MODE_DEEP, 30)");
+			delay(2);
+
+			System.sleep(SLEEP_MODE_DEEP, 30);
+
+			// The rest of the code here is not reached. SLEEP_MODE_DEEP causes the code execution to stop,
+			// and when wake up occurs, it's like a reset where you start again with setup(), all variables are
+			// cleared, etc.
+			Serial.println("returned from sleep, should not occur");
+		}
+	}
+	else {
+		firstAvailable = 0;
+	}
+
+	delay(1000);
+// *********************************************** this is for deepsleep programming
+
+//********This is an LED light loop ***************************
+  // To blink the LED, first we'll turn it on...
+///  digitalWrite(led2, HIGH);
+
+  // We'll leave it on for 1 second...
+///  delay(1000);
+
+  // Then we'll turn it off...
+///  digitalWrite(led2, LOW);
+
+  // Wait 1 second...
+///  delay(1000);
+
+  // And repeat!
+//********This is an LED light loop ***************************
+
+
+  //*********This is for temperature sensor readings**************************  
+    uint16_t rtd = sensor.readRTD();
+  Serial.print("RTD value: "); Serial.println(rtd);
+///  terminal.print("RTD value: "); Serial.println(rtd);
+  
+  float ratio = rtd;
+  ratio /= 32768;
+  Serial.print("Ratio = "); Serial.println(ratio,8);
+///  terminal.print("Ratio = "); Serial.println(ratio,8);
+  Serial.print("Resistance = "); Serial.println(RREF*ratio,8);
+  Serial.print("Temperature = "); Serial.println(sensor.temperature(RNOMINAL, RREF));
+
+  // Check and print any faults
+  uint8_t fault = sensor.readFault();
+
+  if (fault) {
+    Serial.print("Fault 0x"); Serial.println(fault, HEX);
+    if (fault & MAX31865_FAULT_HIGHTHRESH) {
+      Serial.println("RTD High Threshold"); 
+    }
+    if (fault & MAX31865_FAULT_LOWTHRESH) {
+      Serial.println("RTD Low Threshold"); 
+    }
+    if (fault & MAX31865_FAULT_REFINLOW) {
+      Serial.println("REFIN- > 0.85 x Bias"); 
+    }
+    if (fault & MAX31865_FAULT_REFINHIGH) {
+      Serial.println("REFIN- < 0.85 x Bias - FORCE- open"); 
+    }
+    if (fault & MAX31865_FAULT_RTDINLOW) {
+      Serial.println("RTDIN- < 0.85 x Bias - FORCE- open"); 
+    }
+    if (fault & MAX31865_FAULT_OVUV) {
+      Serial.println("Under/Over voltage"); 
+    }
+    sensor.clearFault();
+  } 
+  Blynk.run(); // all the Blynk magic happens here
+    //virtual pin 1 will be the rtd temperature
+  Blynk.virtualWrite(V1, rtd);
+  
+ Blynk.virtualWrite(V2, ratio); //sending to Blynk
+ Blynk.virtualWrite(V3, sensor.temperature(RNOMINAL, RREF));
+// terminal.print(sensor.temperature(RNOMINAL, RREF));
+  Serial.println();
+  delay(100);
+  
+  //*********This is for temperature sensor readings**************************
+  
+//  this is for wifi programming
+    bool wifiReady = WiFi.ready();
+	bool cloudReady = Particle.connected();
+
+	Serial.printlnf("wifi=%s cloud=%s counter=%d", (wifiReady ? "on" : "off"), (cloudReady ? "on" : "off"), counter++);
+
+	if (wifiReady) {
+		if (firstAvailable == 0) {
+			firstAvailable = millis();
+		}
+		if (millis() - firstAvailable > 90000) {
+			// After we've been up for 90 seconds, go to sleep
+			Serial.println("calling System.sleep(120)");
+			Particle.publish("calling System.sleep(120)"); 
+			System.sleep(120);
+
+			// This happens immediately - System.sleep(120) doesn't block and your code keeps running, just with
+			// Wi-Fi and cloud turned off. The LED should breathe white instead of cyan in this state. Then,
+			// after the time expires, reconnection to the cloud occurs
+			Serial.println("returned from sleep");
+			Particle.publish("returned from sleep");
+		}
+	}
+	else {
+		firstAvailable = 0;
+	}
+	
+//*******for vibration adxl345 sensor************************************************************  	
+unsigned int data[6];  
+
+for(int i = 0; i < 6; i++)  
+
+{    
+
+// Start I2C transmission    
+
+Wire.beginTransmission(Addr);    
+
+// Select data register    
+
+Wire.write((50+i));    
+
+// Stop I2C transmission    
+
+Wire.endTransmission();
+
+// Request 1 byte of data from the device    
+
+Wire.requestFrom(Addr,1);    
+
+// Read 6 bytes of data    
+
+// xAccl lsb, xAccl msb, yAccl lsb, yAccl msb, zAccl lsb, zAccl msb    
+
+if(Wire.available()==1)    
+
+{      
+
+data[i] = Wire.read();    
+
+}  
+
+delay(100);  
+
+}
+
+// Convert the data to 10-bits  
+
+int xAccl = (((data[1] & 0x03) * 256) + data[0]); 
+
+
+if(xAccl > 511)  
+
+{    
+
+xAccl -= 1024;  
+
+}  
+
+int yAccl = (((data[3] & 0x03) * 256) + data[2]); 
+
+
+if(yAccl > 511)  
+
+{    
+
+yAccl -= 1024;  
+
+}  
+
+int zAccl = (((data[5] & 0x03) * 256) + data[4]);  
+
+
+if(zAccl > 511)  
+
+{    
+
+zAccl -= 1024;  
+
+}
+//convert to G's************************************
+///xgl = 4/(1023*xAccl) + (2/1023);
+xgl = (xAccl*3.90625/1000);//  1024/1000 - 3.90624 1024 = 10 bits
+
+///ygl = 4/(1023*yAccl) + (2/1023);
+ygl = (yAccl*3.90625/1000);
+
+///zgl = 4/(1023*zAccl) + (2/1023);
+zgl = (zAccl*3.9625/1000);
+
+//convert to G's*************************************
+
+// Output data to dashboard  
+
+Particle.publish("Acceleration data in X-Axis is :", String(xAccl)); 
+Particle.publish("G's in X-Axis is :", String(xgl)); 
+
+Particle.publish("Acceleration data in Y-Axis is :", String(yAccl)); 
+Particle.publish("G's in Y-Axis is :", String(ygl)); 
+
+Particle.publish("Acceleration in Z-Axis is :", String(zAccl));
+Particle.publish("G's in Z-Axis is :", String(zgl)); 
+
+terminal.print(xAccl);
+terminal.print(yAccl);
+terminal.print(zAccl);
+terminal.print("Hello World!");
+
+
+
+
+Blynk.run();
+    Blynk.virtualWrite(V5, xgl);
+    Blynk.virtualWrite(V6, ygl);
+    Blynk.virtualWrite(V7, zgl);
+    Blynk.virtualWrite(V8, xAccl);
+    Blynk.virtualWrite(V9, yAccl);
+    Blynk.virtualWrite(V10, zAccl);   
+//for the Azure integration*******************************************************    
+{
+  // Get some data
+  String data = String(10);
+  // Trigger the integration
+  Particle.publish("xgl", data, PRIVATE);
+  // Wait 60 seconds
+  delay(60000);
+}   
+//************************************************************************************
+    
+    
+
+//*******for vibration adxl345 sensor************************************************************  
+}
